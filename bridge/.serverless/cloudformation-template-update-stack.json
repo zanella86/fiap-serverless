@@ -1,0 +1,311 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "The AWS CloudFormation template for this Serverless application",
+  "Resources": {
+    "ServerlessDeploymentBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ServerlessDeploymentBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "ServerlessDeploymentBucket"
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "s3:*",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::",
+                      {
+                        "Ref": "ServerlessDeploymentBucket"
+                      },
+                      "/*"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::",
+                      {
+                        "Ref": "ServerlessDeploymentBucket"
+                      }
+                    ]
+                  ]
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": false
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "AllEventsLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/pizzaria-dev-allEvents"
+      }
+    },
+    "ReadyLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/pizzaria-dev-ready"
+      }
+    },
+    "AllEventsLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/pizzaria/dev/1685408322903-2023-05-30T00:58:42.903Z/pizzaria.zip"
+        },
+        "Handler": "handler.allEventsHandler",
+        "Runtime": "python3.8",
+        "FunctionName": "pizzaria-dev-allEvents",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Role": {
+          "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:role/LabRole"
+        }
+      },
+      "DependsOn": [
+        "AllEventsLogGroup"
+      ]
+    },
+    "ReadyLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/pizzaria/dev/1685408322903-2023-05-30T00:58:42.903Z/pizzaria.zip"
+        },
+        "Handler": "handler.readyHandler",
+        "Runtime": "python3.8",
+        "FunctionName": "pizzaria-dev-ready",
+        "MemorySize": 1024,
+        "Timeout": 6,
+        "Role": {
+          "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:role/LabRole"
+        }
+      },
+      "DependsOn": [
+        "ReadyLogGroup"
+      ]
+    },
+    "AllEventsLambdaVersionl9Yo7N27McsamQMin84NZUHVir7wgR9vTM54p95J0s": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "AllEventsLambdaFunction"
+        },
+        "CodeSha256": "4Z3saKnSdRw+HxRWHHnKdBwsvRlK4Q3ykKAORnO8o98="
+      }
+    },
+    "ReadyLambdaVersionRvMjZh1srj5LWKQ310tYgTLHjtK6yy5cgRYeOczUI": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "ReadyLambdaFunction"
+        },
+        "CodeSha256": "4Z3saKnSdRw+HxRWHHnKdBwsvRlK4Q3ykKAORnO8o98="
+      }
+    },
+    "PizzariadevallEventsrule1EventBridgeRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "EventBusName": "pizzaria",
+        "EventPattern": {
+          "source": [
+            "com.pizza.status"
+          ]
+        },
+        "Name": "pizzaria-dev-allEvents-rule-1",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "AllEventsLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Id": "pizzaria-dev-allEvents-rule-1-target"
+          }
+        ]
+      }
+    },
+    "AllEventsEventBridgeLambdaPermission1": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Ref": "AllEventsLambdaFunction"
+        },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            ":",
+            [
+              "arn",
+              {
+                "Ref": "AWS::Partition"
+              },
+              "events",
+              {
+                "Ref": "AWS::Region"
+              },
+              {
+                "Ref": "AWS::AccountId"
+              },
+              {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "rule",
+                    "pizzaria",
+                    "pizzaria-dev-allEvents-rule-1"
+                  ]
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    },
+    "Pizzariadevreadyrule1EventBridgeRule": {
+      "Type": "AWS::Events::Rule",
+      "Properties": {
+        "EventBusName": "pizzaria",
+        "EventPattern": {
+          "source": [
+            "com.pizza.status"
+          ],
+          "detail-type": [
+            "Alteracao Pizza"
+          ],
+          "detail": {
+            "status": [
+              "pronto"
+            ]
+          }
+        },
+        "Name": "pizzaria-dev-ready-rule-1",
+        "State": "ENABLED",
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "ReadyLambdaFunction",
+                "Arn"
+              ]
+            },
+            "Id": "pizzaria-dev-ready-rule-1-target"
+          }
+        ]
+      }
+    },
+    "ReadyEventBridgeLambdaPermission1": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Ref": "ReadyLambdaFunction"
+        },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            ":",
+            [
+              "arn",
+              {
+                "Ref": "AWS::Partition"
+              },
+              "events",
+              {
+                "Ref": "AWS::Region"
+              },
+              {
+                "Ref": "AWS::AccountId"
+              },
+              {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "rule",
+                    "pizzaria",
+                    "pizzaria-dev-ready-rule-1"
+                  ]
+                ]
+              }
+            ]
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "ServerlessDeploymentBucketName": {
+      "Value": {
+        "Ref": "ServerlessDeploymentBucket"
+      },
+      "Export": {
+        "Name": "sls-pizzaria-dev-ServerlessDeploymentBucketName"
+      }
+    },
+    "AllEventsLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "AllEventsLambdaVersionl9Yo7N27McsamQMin84NZUHVir7wgR9vTM54p95J0s"
+      },
+      "Export": {
+        "Name": "sls-pizzaria-dev-AllEventsLambdaFunctionQualifiedArn"
+      }
+    },
+    "ReadyLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "ReadyLambdaVersionRvMjZh1srj5LWKQ310tYgTLHjtK6yy5cgRYeOczUI"
+      },
+      "Export": {
+        "Name": "sls-pizzaria-dev-ReadyLambdaFunctionQualifiedArn"
+      }
+    }
+  }
+}
